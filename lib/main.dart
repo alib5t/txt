@@ -1,15 +1,13 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:share_plus/share_plus.dart';
 
 void main() {
-  runApp(const MyApp());
+  runApp(const TxtApp());
 }
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+class TxtApp extends StatelessWidget {
+  const TxtApp({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -18,20 +16,20 @@ class MyApp extends StatelessWidget {
       theme: ThemeData.light(),
       darkTheme: ThemeData.dark(),
       themeMode: ThemeMode.system,
-      home: const HomePage(),
+      home: const EditorPage(),
     );
   }
 }
 
-class HomePage extends StatefulWidget {
-  const HomePage({super.key});
+class EditorPage extends StatefulWidget {
+  const EditorPage({super.key});
 
   @override
-  State<HomePage> createState() => _HomePageState();
+  State<EditorPage> createState() => _EditorPageState();
 }
 
-class _HomePageState extends State<HomePage> {
-  TextEditingController controller = TextEditingController();
+class _EditorPageState extends State<EditorPage> {
+  final TextEditingController controller = TextEditingController();
   bool editing = false;
 
   // 📥 IMPORT
@@ -44,17 +42,20 @@ class _HomePageState extends State<HomePage> {
     if (result == null || result.files.single.path == null) return;
 
     File file = File(result.files.single.path!);
-    String content = await file.readAsString();
+    String text = await file.readAsString();
 
     setState(() {
-      controller.text = content;
+      controller.text = text;
       editing = true;
     });
   }
 
-  // 📤 EXPORT (ANDROID + IOS UYUMLU)
+  // 📤 EXPORT (ANDROID - klasör seç + kaydet)
   Future<void> exportFile() async {
-    TextEditingController nameController =
+    String? folder = await FilePicker.platform.getDirectoryPath();
+    if (folder == null) return;
+
+    TextEditingController nameCtrl =
         TextEditingController(text: "note.txt");
 
     await showDialog(
@@ -63,8 +64,11 @@ class _HomePageState extends State<HomePage> {
         return AlertDialog(
           title: const Text("File name"),
           content: TextField(
-            controller: nameController,
+            controller: nameCtrl,
             autofocus: true,
+            decoration: const InputDecoration(
+              hintText: "example.txt",
+            ),
           ),
           actions: [
             TextButton(
@@ -80,36 +84,15 @@ class _HomePageState extends State<HomePage> {
       },
     );
 
-    String fileName = nameController.text.trim();
+    String fileName = nameCtrl.text.trim();
     if (fileName.isEmpty) return;
 
     if (!fileName.endsWith(".txt")) {
       fileName += ".txt";
     }
 
-    final text = controller.text;
-
-    // ANDROID → klasör seç + kaydet
-    if (Platform.isAndroid) {
-      String? folder = await FilePicker.platform.getDirectoryPath();
-      if (folder == null) return;
-
-      File file = File("$folder/$fileName");
-      await file.writeAsString(text);
-    }
-
-    // IOS → app storage + share
-    else if (Platform.isIOS) {
-      final dir = await getApplicationDocumentsDirectory();
-      final file = File("${dir.path}/$fileName");
-
-      await file.writeAsString(text);
-
-      await Share.shareXFiles(
-        [XFile(file.path)],
-        text: "TXT Export",
-      );
-    }
+    File file = File("$folder/$fileName");
+    await file.writeAsString(controller.text);
 
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text("File saved")),
@@ -121,8 +104,8 @@ class _HomePageState extends State<HomePage> {
     bool isDark = Theme.of(context).brightness == Brightness.dark;
 
     Color bg = isDark ? const Color(0xFF1E1E1E) : Colors.white;
-    Color text = isDark ? Colors.white : Colors.black;
-    Color button = isDark ? Colors.white : Colors.black;
+    Color textColor = isDark ? Colors.white : Colors.black;
+    Color buttonBg = isDark ? Colors.white : Colors.black;
     Color buttonText = isDark ? Colors.black : Colors.white;
 
     return Scaffold(
@@ -130,7 +113,7 @@ class _HomePageState extends State<HomePage> {
       body: SafeArea(
         child: Column(
           children: [
-            // TOP BAR
+            // 🔝 TOP BAR
             Container(
               height: 60,
               padding: const EdgeInsets.symmetric(horizontal: 10),
@@ -139,25 +122,31 @@ class _HomePageState extends State<HomePage> {
                 children: [
                   TextButton(
                     onPressed: exportFile,
-                    style: TextButton.styleFrom(backgroundColor: button),
-                    child: Text("Export file",
-                        style: TextStyle(color: buttonText)),
+                    style: TextButton.styleFrom(backgroundColor: buttonBg),
+                    child: Text(
+                      "Export file",
+                      style: TextStyle(color: buttonText),
+                    ),
                   ),
                   TextButton(
                     onPressed: importFile,
-                    style: TextButton.styleFrom(backgroundColor: button),
-                    child: Text("Import file",
-                        style: TextStyle(color: buttonText)),
+                    style: TextButton.styleFrom(backgroundColor: buttonBg),
+                    child: Text(
+                      "Import file",
+                      style: TextStyle(color: buttonText),
+                    ),
                   ),
                 ],
               ),
             ),
 
-            // MAIN AREA
+            // 📄 MAIN AREA
             Expanded(
               child: GestureDetector(
                 onTap: () {
-                  setState(() => editing = true);
+                  setState(() {
+                    editing = true;
+                  });
                 },
                 child: Container(
                   width: double.infinity,
@@ -167,7 +156,7 @@ class _HomePageState extends State<HomePage> {
                           controller: controller,
                           maxLines: null,
                           autofocus: true,
-                          style: TextStyle(color: text),
+                          style: TextStyle(color: textColor),
                           decoration: const InputDecoration(
                             border: InputBorder.none,
                           ),
@@ -179,7 +168,7 @@ class _HomePageState extends State<HomePage> {
                             style: TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
-                              color: text,
+                              color: textColor,
                             ),
                           ),
                         ),
