@@ -1,13 +1,15 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
 
 void main() {
-  runApp(const TxtApp());
+  runApp(const TxtEditorApp());
 }
 
-class TxtApp extends StatelessWidget {
-  const TxtApp({super.key});
+class TxtEditorApp extends StatelessWidget {
+  const TxtEditorApp({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -16,23 +18,23 @@ class TxtApp extends StatelessWidget {
       theme: ThemeData.light(),
       darkTheme: ThemeData.dark(),
       themeMode: ThemeMode.system,
-      home: const EditorPage(),
+      home: const EditorScreen(),
     );
   }
 }
 
-class EditorPage extends StatefulWidget {
-  const EditorPage({super.key});
+class EditorScreen extends StatefulWidget {
+  const EditorScreen({super.key});
 
   @override
-  State<EditorPage> createState() => _EditorPageState();
+  State<EditorScreen> createState() => _EditorScreenState();
 }
 
-class _EditorPageState extends State<EditorPage> {
+class _EditorScreenState extends State<EditorScreen> {
   final TextEditingController controller = TextEditingController();
   bool editing = false;
 
-  // 📥 IMPORT
+  // 📥 IMPORT (iOS + Android)
   Future<void> importFile() async {
     FilePickerResult? result = await FilePicker.platform.pickFiles(
       type: FileType.custom,
@@ -42,20 +44,17 @@ class _EditorPageState extends State<EditorPage> {
     if (result == null || result.files.single.path == null) return;
 
     File file = File(result.files.single.path!);
-    String text = await file.readAsString();
+    String content = await file.readAsString();
 
     setState(() {
-      controller.text = text;
+      controller.text = content;
       editing = true;
     });
   }
 
-  // 📤 EXPORT (ANDROID - klasör seç + kaydet)
+  // 📤 EXPORT (iOS + Android uyumlu)
   Future<void> exportFile() async {
-    String? folder = await FilePicker.platform.getDirectoryPath();
-    if (folder == null) return;
-
-    TextEditingController nameCtrl =
+    TextEditingController nameController =
         TextEditingController(text: "note.txt");
 
     await showDialog(
@@ -64,11 +63,8 @@ class _EditorPageState extends State<EditorPage> {
         return AlertDialog(
           title: const Text("File name"),
           content: TextField(
-            controller: nameCtrl,
+            controller: nameController,
             autofocus: true,
-            decoration: const InputDecoration(
-              hintText: "example.txt",
-            ),
           ),
           actions: [
             TextButton(
@@ -84,15 +80,34 @@ class _EditorPageState extends State<EditorPage> {
       },
     );
 
-    String fileName = nameCtrl.text.trim();
+    String fileName = nameController.text.trim();
     if (fileName.isEmpty) return;
 
     if (!fileName.endsWith(".txt")) {
       fileName += ".txt";
     }
 
-    File file = File("$folder/$fileName");
-    await file.writeAsString(controller.text);
+    final text = controller.text;
+
+    // 🤖 ANDROID
+    if (Platform.isAndroid) {
+      String? folder = await FilePicker.platform.getDirectoryPath();
+      if (folder == null) return;
+
+      File file = File("$folder/$fileName");
+      await file.writeAsString(text);
+    }
+
+    // 🍎 iOS
+    else if (Platform.isIOS) {
+      final dir = await getApplicationDocumentsDirectory();
+      final file = File("${dir.path}/$fileName");
+
+      await file.writeAsString(text);
+
+      // iOS Files + paylaşım
+      await Share.shareXFiles([XFile(file.path)], text: "Exported file");
+    }
 
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text("File saved")),
@@ -123,18 +138,14 @@ class _EditorPageState extends State<EditorPage> {
                   TextButton(
                     onPressed: exportFile,
                     style: TextButton.styleFrom(backgroundColor: buttonBg),
-                    child: Text(
-                      "Export file",
-                      style: TextStyle(color: buttonText),
-                    ),
+                    child: Text("Export file",
+                        style: TextStyle(color: buttonText)),
                   ),
                   TextButton(
                     onPressed: importFile,
                     style: TextButton.styleFrom(backgroundColor: buttonBg),
-                    child: Text(
-                      "Import file",
-                      style: TextStyle(color: buttonText),
-                    ),
+                    child: Text("Import file",
+                        style: TextStyle(color: buttonText)),
                   ),
                 ],
               ),
@@ -143,11 +154,7 @@ class _EditorPageState extends State<EditorPage> {
             // 📄 MAIN AREA
             Expanded(
               child: GestureDetector(
-                onTap: () {
-                  setState(() {
-                    editing = true;
-                  });
-                },
+                onTap: () => setState(() => editing = true),
                 child: Container(
                   width: double.infinity,
                   padding: const EdgeInsets.all(16),
