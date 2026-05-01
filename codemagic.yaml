@@ -1,25 +1,31 @@
 workflows:
-  ios_unsigned_from_github:
-    name: iOS Unsigned App from GitHub
+  ios_unsigned_app:
+    name: iOS Unsigned App Fix
 
     environment:
       flutter: stable
       xcode: latest
 
     scripts:
-      - name: Install dependencies
+      - name: Install deps
         script: flutter pub get
 
-      - name: Clean build
+      - name: Clean
         script: flutter clean
 
-      - name: Get packages again
+      - name: Get deps again
         script: flutter pub get
 
-      - name: Build iOS unsigned (.app)
-        script: flutter build ios --release --no-codesign
+      - name: Disable signing (important)
+        script: |
+          cd ios
+          /usr/libexec/PlistBuddy -c "Set :CODE_SIGN_STYLE Automatic" Runner.xcodeproj/project.pbxproj || true
 
-      - name: Zip .app output
+      - name: Build iOS without signing (force)
+        script: |
+          flutter build ios --release --no-codesign
+          
+      - name: Create .app zip
         script: |
           cd build/ios/iphoneos
           zip -r Runner.app.zip Runner.app
