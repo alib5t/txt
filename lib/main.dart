@@ -34,17 +34,27 @@ class _EditorScreenState extends State<EditorScreen> {
   final TextEditingController controller = TextEditingController();
   bool editing = false;
 
-  // 📥 IMPORT (iOS + Android)
+  // 📥 IMPORT (iOS + Android) ✅ iOS destek eklendi
   Future<void> importFile() async {
     FilePickerResult? result = await FilePicker.platform.pickFiles(
       type: FileType.custom,
       allowedExtensions: ['txt'],
+      withData: Platform.isIOS, // 🔥 iOS fix
     );
 
-    if (result == null || result.files.single.path == null) return;
+    if (result == null) return;
 
-    File file = File(result.files.single.path!);
-    String content = await file.readAsString();
+    String content = "";
+
+    if (Platform.isIOS) {
+      if (result.files.single.bytes != null) {
+        content = String.fromCharCodes(result.files.single.bytes!);
+      }
+    } else {
+      if (result.files.single.path == null) return;
+      File file = File(result.files.single.path!);
+      content = await file.readAsString();
+    }
 
     setState(() {
       controller.text = content;
