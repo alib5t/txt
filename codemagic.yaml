@@ -1,35 +1,31 @@
 workflows:
-  ios_unsigned_app:
-    name: iOS Unsigned App Fix
+  build_all:
+    name: Build Android APK + iOS Unsigned App
+    max_build_duration: 60
 
     environment:
       flutter: stable
       xcode: latest
+      vars:
+        FLUTTER_VERSION: stable
+
+    cache:
+      cache_paths:
+        - ~/.pub-cache
+        - .dart_tool
 
     scripts:
-      - name: Install deps
+      - name: Get dependencies
         script: flutter pub get
 
-      - name: Clean
-        script: flutter clean
+      # ANDROID APK BUILD
+      - name: Build Android APK (Release)
+        script: flutter build apk --release
 
-      - name: Get deps again
-        script: flutter pub get
-
-      - name: Disable signing (important)
-        script: |
-          cd ios
-          /usr/libexec/PlistBuddy -c "Set :CODE_SIGN_STYLE Automatic" Runner.xcodeproj/project.pbxproj || true
-
-      - name: Build iOS without signing (force)
-        script: |
-          flutter build ios --release --no-codesign
-          
-      - name: Create .app zip
-        script: |
-          cd build/ios/iphoneos
-          zip -r Runner.app.zip Runner.app
+      # iOS UNSIGNED BUILD (.app)
+      - name: Build iOS App (No Codesign)
+        script: flutter build ios --release --no-codesign
 
     artifacts:
+      - build/app/outputs/flutter-apk/app-release.apk
       - build/ios/iphoneos/Runner.app
-      - build/ios/iphoneos/Runner.app.zip
