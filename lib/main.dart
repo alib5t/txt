@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
-import 'package:path_provider/path_provider.dart';
 
 void main() {
   runApp(const TxtEditorApp());
@@ -33,26 +32,32 @@ class EditorScreen extends StatefulWidget {
 
 class _EditorScreenState extends State<EditorScreen> {
   final TextEditingController controller = TextEditingController();
+
   bool editing = false;
 
-  // 📥 IMPORT (iOS + Android) ✅ iOS destek eklendi
+  // 📥 IMPORT FILE
   Future<void> importFile() async {
     FilePickerResult? result = await FilePicker.platform.pickFiles(
       type: FileType.custom,
       allowedExtensions: ['txt'],
-      withData: Platform.isIOS, // 🔥 iOS fix
+      withData: Platform.isIOS,
     );
 
     if (result == null) return;
 
     String content = "";
 
+    // 🍎 iOS
     if (Platform.isIOS) {
       if (result.files.single.bytes != null) {
         content = String.fromCharCodes(result.files.single.bytes!);
       }
-    } else {
+    }
+
+    // 🤖 Android
+    else {
       if (result.files.single.path == null) return;
+
       File file = File(result.files.single.path!);
       content = await file.readAsString();
     }
@@ -63,7 +68,7 @@ class _EditorScreenState extends State<EditorScreen> {
     });
   }
 
-  // 📤 EXPORT (iOS + Android uyumlu)
+  // 📤 EXPORT FILE
   Future<void> exportFile() async {
     TextEditingController nameController =
         TextEditingController(text: "note.txt");
@@ -92,36 +97,42 @@ class _EditorScreenState extends State<EditorScreen> {
     );
 
     String fileName = nameController.text.trim();
+
     if (fileName.isEmpty) return;
 
     if (!fileName.endsWith(".txt")) {
       fileName += ".txt";
     }
 
-    final text = controller.text;
-
     // 🤖 ANDROID
     if (Platform.isAndroid) {
       String? folder = await FilePicker.platform.getDirectoryPath();
+
       if (folder == null) return;
 
       File file = File("$folder/$fileName");
-      await file.writeAsString(text);
+
+      await file.writeAsString(controller.text);
     }
 
     // 🍎 iOS
     else if (Platform.isIOS) {
       final dir = await getApplicationDocumentsDirectory();
+
       final file = File("${dir.path}/$fileName");
 
-      await file.writeAsString(text);
+      await file.writeAsString(controller.text);
 
-      // iOS Files + paylaşım
-      await Share.shareXFiles([XFile(file.path)], text: "Exported file");
+      await Share.shareXFiles(
+        [XFile(file.path)],
+        subject: fileName,
+      );
     }
 
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text("File saved")),
+      const SnackBar(
+        content: Text("File saved"),
+      ),
     );
   }
 
@@ -129,13 +140,20 @@ class _EditorScreenState extends State<EditorScreen> {
   Widget build(BuildContext context) {
     bool isDark = Theme.of(context).brightness == Brightness.dark;
 
-    Color bg = isDark ? const Color(0xFF1E1E1E) : Colors.white;
-    Color textColor = isDark ? Colors.white : Colors.black;
-    Color buttonBg = isDark ? Colors.white : Colors.black;
-    Color buttonText = isDark ? Colors.black : Colors.white;
+    Color backgroundColor =
+        isDark ? const Color(0xFF1E1E1E) : Colors.white;
+
+    Color textColor =
+        isDark ? Colors.white : Colors.black;
+
+    Color buttonColor =
+        isDark ? Colors.white : Colors.black;
+
+    Color buttonTextColor =
+        isDark ? Colors.black : Colors.white;
 
     return Scaffold(
-      backgroundColor: bg,
+      backgroundColor: backgroundColor,
       body: SafeArea(
         child: Column(
           children: [
@@ -144,28 +162,45 @@ class _EditorScreenState extends State<EditorScreen> {
               height: 60,
               padding: const EdgeInsets.symmetric(horizontal: 10),
               child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                mainAxisAlignment:
+                    MainAxisAlignment.spaceBetween,
                 children: [
                   TextButton(
                     onPressed: exportFile,
-                    style: TextButton.styleFrom(backgroundColor: buttonBg),
-                    child: Text("Export file",
-                        style: TextStyle(color: buttonText)),
+                    style: TextButton.styleFrom(
+                      backgroundColor: buttonColor,
+                    ),
+                    child: Text(
+                      "Export file",
+                      style: TextStyle(
+                        color: buttonTextColor,
+                      ),
+                    ),
                   ),
                   TextButton(
                     onPressed: importFile,
-                    style: TextButton.styleFrom(backgroundColor: buttonBg),
-                    child: Text("Import file",
-                        style: TextStyle(color: buttonText)),
+                    style: TextButton.styleFrom(
+                      backgroundColor: buttonColor,
+                    ),
+                    child: Text(
+                      "Import file",
+                      style: TextStyle(
+                        color: buttonTextColor,
+                      ),
+                    ),
                   ),
                 ],
               ),
             ),
 
-            // 📄 MAIN AREA
+            // 📄 EDITOR AREA
             Expanded(
               child: GestureDetector(
-                onTap: () => setState(() => editing = true),
+                onTap: () {
+                  setState(() {
+                    editing = true;
+                  });
+                },
                 child: Container(
                   width: double.infinity,
                   padding: const EdgeInsets.all(16),
@@ -174,8 +209,11 @@ class _EditorScreenState extends State<EditorScreen> {
                           controller: controller,
                           maxLines: null,
                           autofocus: true,
-                          style: TextStyle(color: textColor),
-                          decoration: const InputDecoration(
+                          style: TextStyle(
+                            color: textColor,
+                          ),
+                          decoration:
+                              const InputDecoration(
                             border: InputBorder.none,
                           ),
                         )
