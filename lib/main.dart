@@ -4,6 +4,8 @@ import 'dart:typed_data';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:cross_file/cross_file.dart';
 
 void main() {
   runApp(const TxtEditorApp());
@@ -48,23 +50,18 @@ class _EditorScreenState extends State<EditorScreen> {
 
     String content = "";
 
-    // 🍎 iOS
     if (Platform.isIOS) {
       Uint8List? bytes = result.files.single.bytes;
 
       if (bytes != null) {
         content = String.fromCharCodes(bytes);
       }
-    }
-
-    // 🤖 Android
-    else {
+    } else {
       String? path = result.files.single.path;
 
       if (path == null) return;
 
       File file = File(path);
-
       content = await file.readAsString();
     }
 
@@ -75,76 +72,69 @@ class _EditorScreenState extends State<EditorScreen> {
   }
 
   // 📤 EXPORT FILE
-Future<void> exportFile() async {
-  TextEditingController nameController =
-      TextEditingController(text: "note.txt");
+  Future<void> exportFile() async {
+    TextEditingController nameController =
+        TextEditingController(text: "note.txt");
 
-  bool cancelled = false;
+    bool cancelled = false;
 
-  await showDialog(
-    context: context,
-    builder: (context) {
-      return AlertDialog(
-        title: const Text("File name"),
-        content: TextField(
-          controller: nameController,
-          autofocus: true,
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              cancelled = true;
-              Navigator.pop(context);
-            },
-            child: const Text("Cancel"),
+    await showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text("File name"),
+          content: TextField(
+            controller: nameController,
+            autofocus: true,
           ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-            },
-            child: const Text("Save"),
-          ),
-        ],
-      );
-    },
-  );
-
-  if (cancelled) return;
-
-  String fileName = nameController.text.trim();
-
-  if (fileName.isEmpty) return;
-
-  if (!fileName.endsWith(".txt")) {
-    fileName += ".txt";
-  }
-
-  final dir = await getTemporaryDirectory();
-
-  final file = File("${dir.path}/$fileName");
-
-  await file.writeAsString(controller.text);
-
-  await Share.shareXFiles(
-    [XFile(file.path)],
-    subject: fileName,
-    text: "Save file",
-  );
-
-  if (!mounted) return;
-
-  ScaffoldMessenger.of(context).showSnackBar(
-    const SnackBar(
-      content: Text("File ready"),
-    ),
-  );
-}
+          actions: [
+            TextButton(
+              onPressed: () {
+                cancelled = true;
+                Navigator.pop(context);
+              },
+              child: const Text("Cancel"),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+              },
+              child: const Text("Save"),
+            ),
+          ],
+        );
+      },
+    );
 
     if (cancelled) return;
 
     String fileName = nameController.text.trim();
 
     if (fileName.isEmpty) return;
+
+    if (!fileName.endsWith(".txt")) {
+      fileName += ".txt";
+    }
+
+    final dir = await getTemporaryDirectory();
+    final file = File("${dir.path}/$fileName");
+
+    await file.writeAsString(controller.text);
+
+    await Share.shareXFiles(
+      [XFile(file.path)],
+      subject: fileName,
+      text: "Save file",
+    );
+
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text("File ready"),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -153,27 +143,22 @@ Future<void> exportFile() async {
     Color backgroundColor =
         isDark ? const Color(0xFF1E1E1E) : Colors.white;
 
-    Color textColor =
-        isDark ? Colors.white : Colors.black;
+    Color textColor = isDark ? Colors.white : Colors.black;
 
-    Color buttonColor =
-        isDark ? Colors.white : Colors.black;
+    Color buttonColor = isDark ? Colors.white : Colors.black;
 
-    Color buttonTextColor =
-        isDark ? Colors.black : Colors.white;
+    Color buttonTextColor = isDark ? Colors.black : Colors.white;
 
     return Scaffold(
       backgroundColor: backgroundColor,
       body: SafeArea(
         child: Column(
           children: [
-            // 🔝 TOP BAR
             Container(
               height: 60,
               padding: const EdgeInsets.symmetric(horizontal: 10),
               child: Row(
-                mainAxisAlignment:
-                    MainAxisAlignment.spaceBetween,
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   TextButton(
                     onPressed: exportFile,
@@ -182,9 +167,7 @@ Future<void> exportFile() async {
                     ),
                     child: Text(
                       "Export file",
-                      style: TextStyle(
-                        color: buttonTextColor,
-                      ),
+                      style: TextStyle(color: buttonTextColor),
                     ),
                   ),
                   TextButton(
@@ -194,16 +177,13 @@ Future<void> exportFile() async {
                     ),
                     child: Text(
                       "Import file",
-                      style: TextStyle(
-                        color: buttonTextColor,
-                      ),
+                      style: TextStyle(color: buttonTextColor),
                     ),
                   ),
                 ],
               ),
             ),
 
-            // 📄 EDITOR AREA
             Expanded(
               child: GestureDetector(
                 onTap: () {
@@ -219,9 +199,7 @@ Future<void> exportFile() async {
                           controller: controller,
                           maxLines: null,
                           autofocus: true,
-                          style: TextStyle(
-                            color: textColor,
-                          ),
+                          style: TextStyle(color: textColor),
                           decoration: const InputDecoration(
                             border: InputBorder.none,
                           ),
