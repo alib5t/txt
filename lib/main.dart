@@ -1,6 +1,8 @@
 import 'dart:io';
-import 'package:flutter/material.dart';
+import 'dart:typed_data';
+
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 
@@ -35,7 +37,7 @@ class _EditorScreenState extends State<EditorScreen> {
 
   bool editing = false;
 
-  // 📥 IMPORT FILE
+  // 📥 IMPORT
   Future<void> importFile() async {
     FilePickerResult? result = await FilePicker.platform.pickFiles(
       type: FileType.custom,
@@ -49,16 +51,20 @@ class _EditorScreenState extends State<EditorScreen> {
 
     // 🍎 iOS
     if (Platform.isIOS) {
-      if (result.files.single.bytes != null) {
-        content = String.fromCharCodes(result.files.single.bytes!);
+      Uint8List? bytes = result.files.single.bytes;
+
+      if (bytes != null) {
+        content = String.fromCharCodes(bytes);
       }
     }
 
     // 🤖 Android
     else {
-      if (result.files.single.path == null) return;
+      String? path = result.files.single.path;
 
-      File file = File(result.files.single.path!);
+      if (path == null) return;
+
+      File file = File(path);
 
       content = await file.readAsString();
     }
@@ -69,14 +75,8 @@ class _EditorScreenState extends State<EditorScreen> {
     });
   }
 
-  // 📤 EXPORT FILE
+  // 📤 EXPORT
   Future<void> exportFile() async {
-    // 📁 Önce klasör seç
-    String? folder = await FilePicker.platform.getDirectoryPath();
-
-    if (folder == null) return;
-
-    // 📝 Dosya adı seç
     TextEditingController nameController =
         TextEditingController(text: "note.txt");
 
@@ -122,14 +122,23 @@ class _EditorScreenState extends State<EditorScreen> {
 
     // 🤖 ANDROID
     if (Platform.isAndroid) {
-      File file = File("$folder/$fileName");
+      String? outputFile = await FilePicker.platform.saveFile(
+        dialogTitle: 'Save file',
+        fileName: fileName,
+        type: FileType.custom,
+        allowedExtensions: ['txt'],
+      );
+
+      if (outputFile == null) return;
+
+      File file = File(outputFile);
 
       await file.writeAsString(controller.text);
     }
 
     // 🍎 iOS
     else if (Platform.isIOS) {
-      final dir = await getApplicationDocumentsDirectory();
+      final dir = await getTemporaryDirectory();
 
       final file = File("${dir.path}/$fileName");
 
@@ -140,6 +149,8 @@ class _EditorScreenState extends State<EditorScreen> {
         subject: fileName,
       );
     }
+
+    if (!mounted) return;
 
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
@@ -205,7 +216,7 @@ class _EditorScreenState extends State<EditorScreen> {
               ),
             ),
 
-            // 📄 EDITOR AREA
+            // 📄 EDITOR
             Expanded(
               child: GestureDetector(
                 onTap: () {
@@ -221,9 +232,7 @@ class _EditorScreenState extends State<EditorScreen> {
                           controller: controller,
                           maxLines: null,
                           autofocus: true,
-                          style: TextStyle(
-                            color: textColor,
-                          ),
+                          style: TextStyle(color: textColor),
                           decoration: const InputDecoration(
                             border: InputBorder.none,
                           ),
