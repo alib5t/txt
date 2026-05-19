@@ -70,92 +70,65 @@ class _EditorScreenState extends State<EditorScreen> {
   }
 
   // 📤 EXPORT FILE
-Future<void> exportFile() async {
-  // 📁 Önce klasör seç
-  String? folder = await FilePicker.platform.getDirectoryPath();
+  Future<void> exportFile() async {
+    // 📁 Önce klasör seç
+    String? folder = await FilePicker.platform.getDirectoryPath();
 
-  if (folder == null) return;
+    if (folder == null) return;
 
-  // 📝 Sonra dosya adı seç
-  TextEditingController nameController =
-      TextEditingController(text: "note.txt");
+    // 📝 Dosya adı seç
+    TextEditingController nameController =
+        TextEditingController(text: "note.txt");
 
-  bool cancelled = false;
+    bool cancelled = false;
 
-  await showDialog(
-    context: context,
-    builder: (context) {
-      return AlertDialog(
-        title: const Text("File name"),
-        content: TextField(
-          controller: nameController,
-          autofocus: true,
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              cancelled = true;
-              Navigator.pop(context);
-            },
-            child: const Text("Cancel"),
+    await showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text("File name"),
+          content: TextField(
+            controller: nameController,
+            autofocus: true,
           ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-            },
-            child: const Text("Save"),
-          ),
-        ],
-      );
-    },
-  );
-
-  if (cancelled) return;
-
-  String fileName = nameController.text.trim();
-
-  if (fileName.isEmpty) return;
-
-  if (!fileName.endsWith(".txt")) {
-    fileName += ".txt";
-  }
-
-  // 🤖 ANDROID
-  if (Platform.isAndroid) {
-    File file = File("$folder/$fileName");
-
-    await file.writeAsString(controller.text);
-  }
-
-  // 🍎 iOS
-  else if (Platform.isIOS) {
-    final dir = await getApplicationDocumentsDirectory();
-
-    final file = File("${dir.path}/$fileName");
-
-    await file.writeAsString(controller.text);
-
-    await Share.shareXFiles(
-      [XFile(file.path)],
-      subject: fileName,
+          actions: [
+            TextButton(
+              onPressed: () {
+                cancelled = true;
+                Navigator.pop(context);
+              },
+              child: const Text("Cancel"),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+              },
+              child: const Text("Save"),
+            ),
+          ],
+        );
+      },
     );
-  }
 
-  ScaffoldMessenger.of(context).showSnackBar(
-    const SnackBar(
-      content: Text("File saved"),
-    ),
-  );
-}
+    if (cancelled) return;
 
-      String fileName = nameController.text.trim();
+    String fileName = nameController.text.trim();
 
-      if (fileName.isEmpty) return;
+    if (fileName.isEmpty) return;
 
-      if (!fileName.endsWith(".txt")) {
-        fileName += ".txt";
-      }
+    if (!fileName.endsWith(".txt")) {
+      fileName += ".txt";
+    }
 
+    // 🤖 ANDROID
+    if (Platform.isAndroid) {
+      File file = File("$folder/$fileName");
+
+      await file.writeAsString(controller.text);
+    }
+
+    // 🍎 iOS
+    else if (Platform.isIOS) {
       final dir = await getApplicationDocumentsDirectory();
 
       final file = File("${dir.path}/$fileName");
@@ -251,8 +224,7 @@ Future<void> exportFile() async {
                           style: TextStyle(
                             color: textColor,
                           ),
-                          decoration:
-                              const InputDecoration(
+                          decoration: const InputDecoration(
                             border: InputBorder.none,
                           ),
                         )
