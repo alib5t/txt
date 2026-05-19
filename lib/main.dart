@@ -59,6 +59,7 @@ class _EditorScreenState extends State<EditorScreen> {
       if (result.files.single.path == null) return;
 
       File file = File(result.files.single.path!);
+
       content = await file.readAsString();
     }
 
@@ -70,53 +71,59 @@ class _EditorScreenState extends State<EditorScreen> {
 
   // 📤 EXPORT FILE
   Future<void> exportFile() async {
-    TextEditingController nameController =
-        TextEditingController(text: "note.txt");
-
-    await showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text("File name"),
-          content: TextField(
-            controller: nameController,
-            autofocus: true,
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text("Cancel"),
-            ),
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text("Save"),
-            ),
-          ],
-        );
-      },
-    );
-
-    String fileName = nameController.text.trim();
-
-    if (fileName.isEmpty) return;
-
-    if (!fileName.endsWith(".txt")) {
-      fileName += ".txt";
-    }
-
     // 🤖 ANDROID
     if (Platform.isAndroid) {
-      String? folder = await FilePicker.platform.getDirectoryPath();
+      // Önce dosya yolu seç
+      String? outputFile = await FilePicker.platform.saveFile(
+        dialogTitle: 'Save file',
+        fileName: 'note.txt',
+        type: FileType.custom,
+        allowedExtensions: ['txt'],
+      );
 
-      if (folder == null) return;
+      if (outputFile == null) return;
 
-      File file = File("$folder/$fileName");
+      File file = File(outputFile);
 
       await file.writeAsString(controller.text);
     }
 
     // 🍎 iOS
     else if (Platform.isIOS) {
+      TextEditingController nameController =
+          TextEditingController(text: "note.txt");
+
+      await showDialog(
+        context: context,
+        builder: (context) {
+          return AlertDialog(
+            title: const Text("File name"),
+            content: TextField(
+              controller: nameController,
+              autofocus: true,
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text("Cancel"),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text("Save"),
+              ),
+            ],
+          );
+        },
+      );
+
+      String fileName = nameController.text.trim();
+
+      if (fileName.isEmpty) return;
+
+      if (!fileName.endsWith(".txt")) {
+        fileName += ".txt";
+      }
+
       final dir = await getApplicationDocumentsDirectory();
 
       final file = File("${dir.path}/$fileName");
