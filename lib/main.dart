@@ -1,11 +1,9 @@
 import 'dart:io';
 import 'dart:typed_data';
 
-import 'package:document_file_save_plus/document_file_save_plus.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:file_saver/file_saver.dart';
 import 'package:flutter/material.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:share_plus/share_plus.dart';
 
 void main() {
   runApp(const TxtEditorApp());
@@ -79,7 +77,7 @@ class _EditorScreenState extends State<EditorScreen> {
   // 📤 EXPORT FILE
   Future<void> exportFile() async {
     TextEditingController nameController =
-        TextEditingController(text: "note.txt");
+        TextEditingController(text: "note");
 
     bool cancelled = false;
 
@@ -117,32 +115,12 @@ class _EditorScreenState extends State<EditorScreen> {
 
     if (fileName.isEmpty) return;
 
-    if (!fileName.endsWith(".txt")) {
-      fileName += ".txt";
-    }
-
-    // 🤖 ANDROID
-    if (Platform.isAndroid) {
-      await DocumentFileSavePlus().saveFile(
-        controller.text.codeUnits,
-        fileName,
-        "text/plain",
-      );
-    }
-
-    // 🍎 iOS
-    else if (Platform.isIOS) {
-      final dir = await getTemporaryDirectory();
-
-      final file = File("${dir.path}/$fileName");
-
-      await file.writeAsString(controller.text);
-
-      await Share.shareXFiles(
-        [XFile(file.path)],
-        subject: fileName,
-      );
-    }
+    await FileSaver.instance.saveFile(
+      name: fileName,
+      bytes: Uint8List.fromList(controller.text.codeUnits),
+      ext: "txt",
+      mimeType: MimeType.text,
+    );
 
     if (!mounted) return;
 
