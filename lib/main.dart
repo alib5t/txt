@@ -70,51 +70,83 @@ class _EditorScreenState extends State<EditorScreen> {
   }
 
   // 📤 EXPORT FILE
-  Future<void> exportFile() async {
-    // 🤖 ANDROID
-    if (Platform.isAndroid) {
-      // Önce dosya yolu seç
-      String? outputFile = await FilePicker.platform.saveFile(
-        dialogTitle: 'Save file',
-        fileName: 'note.txt',
-        type: FileType.custom,
-        allowedExtensions: ['txt'],
+Future<void> exportFile() async {
+  // 📁 Önce klasör seç
+  String? folder = await FilePicker.platform.getDirectoryPath();
+
+  if (folder == null) return;
+
+  // 📝 Sonra dosya adı seç
+  TextEditingController nameController =
+      TextEditingController(text: "note.txt");
+
+  bool cancelled = false;
+
+  await showDialog(
+    context: context,
+    builder: (context) {
+      return AlertDialog(
+        title: const Text("File name"),
+        content: TextField(
+          controller: nameController,
+          autofocus: true,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              cancelled = true;
+              Navigator.pop(context);
+            },
+            child: const Text("Cancel"),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+            },
+            child: const Text("Save"),
+          ),
+        ],
       );
+    },
+  );
 
-      if (outputFile == null) return;
+  if (cancelled) return;
 
-      File file = File(outputFile);
+  String fileName = nameController.text.trim();
 
-      await file.writeAsString(controller.text);
-    }
+  if (fileName.isEmpty) return;
 
-    // 🍎 iOS
-    else if (Platform.isIOS) {
-      TextEditingController nameController =
-          TextEditingController(text: "note.txt");
+  if (!fileName.endsWith(".txt")) {
+    fileName += ".txt";
+  }
 
-      await showDialog(
-        context: context,
-        builder: (context) {
-          return AlertDialog(
-            title: const Text("File name"),
-            content: TextField(
-              controller: nameController,
-              autofocus: true,
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text("Cancel"),
-              ),
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text("Save"),
-              ),
-            ],
-          );
-        },
-      );
+  // 🤖 ANDROID
+  if (Platform.isAndroid) {
+    File file = File("$folder/$fileName");
+
+    await file.writeAsString(controller.text);
+  }
+
+  // 🍎 iOS
+  else if (Platform.isIOS) {
+    final dir = await getApplicationDocumentsDirectory();
+
+    final file = File("${dir.path}/$fileName");
+
+    await file.writeAsString(controller.text);
+
+    await Share.shareXFiles(
+      [XFile(file.path)],
+      subject: fileName,
+    );
+  }
+
+  ScaffoldMessenger.of(context).showSnackBar(
+    const SnackBar(
+      content: Text("File saved"),
+    ),
+  );
+}
 
       String fileName = nameController.text.trim();
 
