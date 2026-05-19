@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:document_file_save_plus/document_file_save_plus.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
@@ -37,7 +38,7 @@ class _EditorScreenState extends State<EditorScreen> {
 
   bool editing = false;
 
-  // 📥 IMPORT
+  // 📥 IMPORT FILE
   Future<void> importFile() async {
     FilePickerResult? result = await FilePicker.platform.pickFiles(
       type: FileType.custom,
@@ -75,7 +76,7 @@ class _EditorScreenState extends State<EditorScreen> {
     });
   }
 
-  // 📤 EXPORT
+  // 📤 EXPORT FILE
   Future<void> exportFile() async {
     TextEditingController nameController =
         TextEditingController(text: "note.txt");
@@ -122,18 +123,11 @@ class _EditorScreenState extends State<EditorScreen> {
 
     // 🤖 ANDROID
     if (Platform.isAndroid) {
-      String? outputFile = await FilePicker.platform.saveFile(
-        dialogTitle: 'Save file',
-        fileName: fileName,
-        type: FileType.custom,
-        allowedExtensions: ['txt'],
+      await DocumentFileSavePlus().saveFile(
+        controller.text.codeUnits,
+        fileName,
+        "text/plain",
       );
-
-      if (outputFile == null) return;
-
-      File file = File(outputFile);
-
-      await file.writeAsString(controller.text);
     }
 
     // 🍎 iOS
@@ -216,7 +210,7 @@ class _EditorScreenState extends State<EditorScreen> {
               ),
             ),
 
-            // 📄 EDITOR
+            // 📄 EDITOR AREA
             Expanded(
               child: GestureDetector(
                 onTap: () {
@@ -232,7 +226,9 @@ class _EditorScreenState extends State<EditorScreen> {
                           controller: controller,
                           maxLines: null,
                           autofocus: true,
-                          style: TextStyle(color: textColor),
+                          style: TextStyle(
+                            color: textColor,
+                          ),
                           decoration: const InputDecoration(
                             border: InputBorder.none,
                           ),
