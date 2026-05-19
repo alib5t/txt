@@ -2,8 +2,8 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:file_picker/file_picker.dart';
-import 'package:file_saver/file_saver.dart';
 import 'package:flutter/material.dart';
+import 'package:path_provider/path_provider.dart';
 
 void main() {
   runApp(const TxtEditorApp());
@@ -75,61 +75,76 @@ class _EditorScreenState extends State<EditorScreen> {
   }
 
   // 📤 EXPORT FILE
-  Future<void> exportFile() async {
-    TextEditingController nameController =
-        TextEditingController(text: "note");
+Future<void> exportFile() async {
+  TextEditingController nameController =
+      TextEditingController(text: "note.txt");
 
-    bool cancelled = false;
+  bool cancelled = false;
 
-    await showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text("File name"),
-          content: TextField(
-            controller: nameController,
-            autofocus: true,
+  await showDialog(
+    context: context,
+    builder: (context) {
+      return AlertDialog(
+        title: const Text("File name"),
+        content: TextField(
+          controller: nameController,
+          autofocus: true,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              cancelled = true;
+              Navigator.pop(context);
+            },
+            child: const Text("Cancel"),
           ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                cancelled = true;
-                Navigator.pop(context);
-              },
-              child: const Text("Cancel"),
-            ),
-            TextButton(
-              onPressed: () {
-                Navigator.pop(context);
-              },
-              child: const Text("Save"),
-            ),
-          ],
-        );
-      },
-    );
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+            },
+            child: const Text("Save"),
+          ),
+        ],
+      );
+    },
+  );
+
+  if (cancelled) return;
+
+  String fileName = nameController.text.trim();
+
+  if (fileName.isEmpty) return;
+
+  if (!fileName.endsWith(".txt")) {
+    fileName += ".txt";
+  }
+
+  final dir = await getTemporaryDirectory();
+
+  final file = File("${dir.path}/$fileName");
+
+  await file.writeAsString(controller.text);
+
+  await Share.shareXFiles(
+    [XFile(file.path)],
+    subject: fileName,
+    text: "Save file",
+  );
+
+  if (!mounted) return;
+
+  ScaffoldMessenger.of(context).showSnackBar(
+    const SnackBar(
+      content: Text("File ready"),
+    ),
+  );
+}
 
     if (cancelled) return;
 
     String fileName = nameController.text.trim();
 
     if (fileName.isEmpty) return;
-
-    await FileSaver.instance.saveFile(
-      name: fileName,
-      bytes: Uint8List.fromList(controller.text.codeUnits),
-      ext: "txt",
-      mimeType: MimeType.text,
-    );
-
-    if (!mounted) return;
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text("File saved"),
-      ),
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
