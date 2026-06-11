@@ -1,11 +1,9 @@
 import 'dart:io';
-import 'dart:typed_data';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
-import 'package:cross_file/cross_file.dart';
 
 void main() {
   runApp(const TxtEditorApp());
@@ -18,9 +16,9 @@ class TxtEditorApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
+      themeMode: ThemeMode.system,
       theme: ThemeData.light(),
       darkTheme: ThemeData.dark(),
-      themeMode: ThemeMode.system,
       home: const EditorScreen(),
     );
   }
@@ -38,32 +36,21 @@ class _EditorScreenState extends State<EditorScreen> {
 
   bool editing = false;
 
-  // 📥 IMPORT FILE
   Future<void> importFile() async {
-    FilePickerResult? result = await FilePicker.platform.pickFiles(
+    final result = await FilePicker.platform.pickFiles(
       type: FileType.custom,
       allowedExtensions: ['txt'],
-      withData: Platform.isIOS,
     );
 
     if (result == null) return;
 
-    String content = "";
+    final path = result.files.single.path;
 
-    if (Platform.isIOS) {
-      Uint8List? bytes = result.files.single.bytes;
+    if (path == null) return;
 
-      if (bytes != null) {
-        content = String.fromCharCodes(bytes);
-      }
-    } else {
-      String? path = result.files.single.path;
+    final file = File(path);
 
-      if (path == null) return;
-
-      File file = File(path);
-      content = await file.readAsString();
-    }
+    final content = await file.readAsString();
 
     setState(() {
       controller.text = content;
@@ -71,9 +58,8 @@ class _EditorScreenState extends State<EditorScreen> {
     });
   }
 
-  // 📤 EXPORT FILE
   Future<void> exportFile() async {
-    TextEditingController nameController =
+    final nameController =
         TextEditingController(text: "note.txt");
 
     bool cancelled = false;
@@ -116,15 +102,18 @@ class _EditorScreenState extends State<EditorScreen> {
       fileName += ".txt";
     }
 
-    final dir = await getTemporaryDirectory();
-    final file = File("${dir.path}/$fileName");
+    final tempDir = await getTemporaryDirectory();
+
+    final file = File(
+      "${tempDir.path}/$fileName",
+    );
 
     await file.writeAsString(controller.text);
 
     await Share.shareXFiles(
       [XFile(file.path)],
       subject: fileName,
-      text: "Save file",
+      text: "Exported text file",
     );
 
     if (!mounted) return;
@@ -138,27 +127,33 @@ class _EditorScreenState extends State<EditorScreen> {
 
   @override
   Widget build(BuildContext context) {
-    bool isDark = Theme.of(context).brightness == Brightness.dark;
+    final dark =
+        Theme.of(context).brightness == Brightness.dark;
 
-    Color backgroundColor =
-        isDark ? const Color(0xFF1E1E1E) : Colors.white;
+    final background =
+        dark ? const Color(0xFF1E1E1E) : Colors.white;
 
-    Color textColor = isDark ? Colors.white : Colors.black;
+    final textColor =
+        dark ? Colors.white : Colors.black;
 
-    Color buttonColor = isDark ? Colors.white : Colors.black;
+    final buttonColor =
+        dark ? Colors.white : Colors.black;
 
-    Color buttonTextColor = isDark ? Colors.black : Colors.white;
+    final buttonTextColor =
+        dark ? Colors.black : Colors.white;
 
     return Scaffold(
-      backgroundColor: backgroundColor,
+      backgroundColor: background,
       body: SafeArea(
         child: Column(
           children: [
             Container(
               height: 60,
-              padding: const EdgeInsets.symmetric(horizontal: 10),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 10),
               child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                mainAxisAlignment:
+                    MainAxisAlignment.spaceBetween,
                 children: [
                   TextButton(
                     onPressed: exportFile,
@@ -167,7 +162,9 @@ class _EditorScreenState extends State<EditorScreen> {
                     ),
                     child: Text(
                       "Export file",
-                      style: TextStyle(color: buttonTextColor),
+                      style: TextStyle(
+                        color: buttonTextColor,
+                      ),
                     ),
                   ),
                   TextButton(
@@ -177,13 +174,14 @@ class _EditorScreenState extends State<EditorScreen> {
                     ),
                     child: Text(
                       "Import file",
-                      style: TextStyle(color: buttonTextColor),
+                      style: TextStyle(
+                        color: buttonTextColor,
+                      ),
                     ),
                   ),
                 ],
               ),
             ),
-
             Expanded(
               child: GestureDetector(
                 onTap: () {
@@ -199,8 +197,11 @@ class _EditorScreenState extends State<EditorScreen> {
                           controller: controller,
                           maxLines: null,
                           autofocus: true,
-                          style: TextStyle(color: textColor),
-                          decoration: const InputDecoration(
+                          style: TextStyle(
+                            color: textColor,
+                          ),
+                          decoration:
+                              const InputDecoration(
                             border: InputBorder.none,
                           ),
                         )
@@ -210,7 +211,8 @@ class _EditorScreenState extends State<EditorScreen> {
                             textAlign: TextAlign.center,
                             style: TextStyle(
                               fontSize: 18,
-                              fontWeight: FontWeight.bold,
+                              fontWeight:
+                                  FontWeight.bold,
                               color: textColor,
                             ),
                           ),
