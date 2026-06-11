@@ -121,38 +121,6 @@ Future<void> exportFile() async {
   );
 }
 
-    if (cancelled) return;
-
-    String fileName = nameController.text.trim();
-
-    if (fileName.isEmpty) return;
-
-    if (!fileName.endsWith(".txt")) {
-      fileName += ".txt";
-    }
-
-    final tempDir = await getTemporaryDirectory();
-
-    final file = File(
-      "${tempDir.path}/$fileName",
-    );
-
-    await file.writeAsString(controller.text);
-
-    await Share.shareXFiles(
-      [XFile(file.path)],
-      subject: fileName,
-      text: "Exported text file",
-    );
-
-    if (!mounted) return;
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text("File ready"),
-      ),
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
