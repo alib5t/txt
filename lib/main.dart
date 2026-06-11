@@ -58,39 +58,68 @@ class _EditorScreenState extends State<EditorScreen> {
     });
   }
 
-  Future<void> exportFile() async {
-    final nameController =
-        TextEditingController(text: "note.txt");
+Future<void> exportFile() async {
+  TextEditingController nameController =
+      TextEditingController(text: "note.txt");
 
-    bool cancelled = false;
+  bool cancelled = false;
 
-    await showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text("File name"),
-          content: TextField(
-            controller: nameController,
-            autofocus: true,
+  await showDialog(
+    context: context,
+    builder: (context) {
+      return AlertDialog(
+        title: const Text("File name"),
+        content: TextField(
+          controller: nameController,
+          autofocus: true,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              cancelled = true;
+              Navigator.pop(context);
+            },
+            child: const Text("Cancel"),
           ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                cancelled = true;
-                Navigator.pop(context);
-              },
-              child: const Text("Cancel"),
-            ),
-            TextButton(
-              onPressed: () {
-                Navigator.pop(context);
-              },
-              child: const Text("Save"),
-            ),
-          ],
-        );
-      },
-    );
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("Save"),
+          ),
+        ],
+      );
+    },
+  );
+
+  if (cancelled) return;
+
+  String fileName = nameController.text.trim();
+
+  if (fileName.isEmpty) return;
+
+  if (!fileName.endsWith(".txt")) {
+    fileName += ".txt";
+  }
+
+  final baseDir = Directory("/storage/emulated/0/TXTEditor");
+
+  if (!await baseDir.exists()) {
+    await baseDir.create(recursive: true);
+  }
+
+  final file = File("${baseDir.path}/$fileName");
+
+  await file.writeAsString(controller.text);
+
+  if (!mounted) return;
+
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(
+      content: Text(
+        "Saved to ${file.path}",
+      ),
+    ),
+  );
+}
 
     if (cancelled) return;
 
