@@ -2,8 +2,7 @@ import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:share_plus/share_plus.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 void main() {
   runApp(const TxtEditorApp());
@@ -16,9 +15,9 @@ class TxtEditorApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      themeMode: ThemeMode.system,
       theme: ThemeData.light(),
       darkTheme: ThemeData.dark(),
+      themeMode: ThemeMode.system,
       home: const EditorScreen(),
     );
   }
@@ -35,6 +34,24 @@ class _EditorScreenState extends State<EditorScreen> {
   final TextEditingController controller = TextEditingController();
 
   bool editing = false;
+
+  @override
+  void initState() {
+    super.initState();
+    setupStorage();
+  }
+
+  Future<void> setupStorage() async {
+    await Permission.manageExternalStorage.request();
+
+    if (await Permission.manageExternalStorage.isGranted) {
+      final dir = Directory("/storage/emulated/0/TXTEditor");
+
+      if (!await dir.exists()) {
+        await dir.create(recursive: true);
+      }
+    }
+  }
 
   Future<void> importFile() async {
     final result = await FilePicker.platform.pickFiles(
@@ -58,122 +75,113 @@ class _EditorScreenState extends State<EditorScreen> {
     });
   }
 
-Future<void> exportFile() async {
-  TextEditingController nameController =
-      TextEditingController(text: "note.txt");
+  Future<void> exportFile() async {
+    TextEditingController nameController =
+        TextEditingController(text: "note.txt");
 
-  bool cancelled = false;
+    bool cancelled = false;
 
-  await showDialog(
-    context: context,
-    builder: (context) {
-      return AlertDialog(
-        title: const Text("File name"),
-        content: TextField(
-          controller: nameController,
-          autofocus: true,
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              cancelled = true;
-              Navigator.pop(context);
-            },
-            child: const Text("Cancel"),
+    await showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text("File name"),
+          content: TextField(
+            controller: nameController,
+            autofocus: true,
           ),
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text("Save"),
-          ),
-        ],
-      );
-    },
-  );
+          actions: [
+            TextButton(
+              onPressed: () {
+                cancelled = true;
+                Navigator.pop(context);
+              },
+              child: const Text("Cancel"),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+              },
+              child: const Text("Save"),
+            ),
+          ],
+        );
+      },
+    );
 
-  if (cancelled) return;
+    if (cancelled) return;
 
-  String fileName = nameController.text.trim();
+    String fileName = nameController.text.trim();
 
-  if (fileName.isEmpty) return;
+    if (fileName.isEmpty) return;
 
-  if (!fileName.endsWith(".txt")) {
-    fileName += ".txt";
-  }
+    if (!fileName.endsWith(".txt")) {
+      fileName += ".txt";
+    }
 
-  final baseDir = Directory("/storage/emulated/0/TXTEditor");
+    await Permission.manageExternalStorage.request();
 
-  if (!await baseDir.exists()) {
-    await baseDir.create(recursive: true);
-  }
+    if (!await Permission.manageExternalStorage.isGranted) {
+      return;
+    }
 
-  final file = File("${baseDir.path}/$fileName");
+    final baseDir = Directory("/storage/emulated/0/TXTEditor");
 
-  await file.writeAsString(controller.text);
+    if (!await baseDir.exists()) {
+      await baseDir.create(recursive: true);
+    }
 
-  if (!mounted) return;
+    final file = File("${baseDir.path}/$fileName");
 
-  ScaffoldMessenger.of(context).showSnackBar(
-    SnackBar(
-      content: Text(
-        "Saved to ${file.path}",
+    await file.writeAsString(controller.text);
+
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text("Saved to ${file.path}"),
       ),
-    ),
-  );
-}
-
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
-    final dark =
-        Theme.of(context).brightness == Brightness.dark;
+    bool isDark = Theme.of(context).brightness == Brightness.dark;
 
-    final background =
-        dark ? const Color(0xFF1E1E1E) : Colors.white;
-
-    final textColor =
-        dark ? Colors.white : Colors.black;
-
-    final buttonColor =
-        dark ? Colors.white : Colors.black;
-
-    final buttonTextColor =
-        dark ? Colors.black : Colors.white;
+    Color bg = isDark ? const Color(0xFF1E1E1E) : Colors.white;
+    Color textColor = isDark ? Colors.white : Colors.black;
+    Color buttonBg = isDark ? Colors.white : Colors.black;
+    Color buttonText = isDark ? Colors.black : Colors.white;
 
     return Scaffold(
-      backgroundColor: background,
+      backgroundColor: bg,
       body: SafeArea(
         child: Column(
           children: [
             Container(
               height: 60,
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 10),
+              padding: const EdgeInsets.symmetric(horizontal: 10),
               child: Row(
-                mainAxisAlignment:
-                    MainAxisAlignment.spaceBetween,
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   TextButton(
                     onPressed: exportFile,
                     style: TextButton.styleFrom(
-                      backgroundColor: buttonColor,
+                      backgroundColor: buttonBg,
                     ),
                     child: Text(
                       "Export file",
-                      style: TextStyle(
-                        color: buttonTextColor,
-                      ),
+                      style: TextStyle(color: buttonText),
                     ),
                   ),
                   TextButton(
                     onPressed: importFile,
                     style: TextButton.styleFrom(
-                      backgroundColor: buttonColor,
+                      backgroundColor: buttonBg,
                     ),
                     child: Text(
                       "Import file",
-                      style: TextStyle(
-                        color: buttonTextColor,
-                      ),
+                      style: TextStyle(color: buttonText),
                     ),
                   ),
                 ],
@@ -194,11 +202,8 @@ Future<void> exportFile() async {
                           controller: controller,
                           maxLines: null,
                           autofocus: true,
-                          style: TextStyle(
-                            color: textColor,
-                          ),
-                          decoration:
-                              const InputDecoration(
+                          style: TextStyle(color: textColor),
+                          decoration: const InputDecoration(
                             border: InputBorder.none,
                           ),
                         )
@@ -208,8 +213,7 @@ Future<void> exportFile() async {
                             textAlign: TextAlign.center,
                             style: TextStyle(
                               fontSize: 18,
-                              fontWeight:
-                                  FontWeight.bold,
+                              fontWeight: FontWeight.bold,
                               color: textColor,
                             ),
                           ),
