@@ -75,74 +75,26 @@ class _EditorScreenState extends State<EditorScreen> {
     });
   }
 
-  Future<void> exportFile() async {
-    TextEditingController nameController =
-        TextEditingController(text: "note.txt");
+Future<void> exportFile() async {
+  String? path = await FilePicker.platform.saveFile(
+    dialogTitle: 'Save TXT File',
+    fileName: 'note.txt',
+  );
 
-    bool cancelled = false;
+  if (path == null) return;
 
-    await showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text("File name"),
-          content: TextField(
-            controller: nameController,
-            autofocus: true,
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                cancelled = true;
-                Navigator.pop(context);
-              },
-              child: const Text("Cancel"),
-            ),
-            TextButton(
-              onPressed: () {
-                Navigator.pop(context);
-              },
-              child: const Text("Save"),
-            ),
-          ],
-        );
-      },
-    );
+  final file = File(path);
 
-    if (cancelled) return;
+  await file.writeAsString(controller.text);
 
-    String fileName = nameController.text.trim();
+  if (!mounted) return;
 
-    if (fileName.isEmpty) return;
-
-    if (!fileName.endsWith(".txt")) {
-      fileName += ".txt";
-    }
-
-    await Permission.manageExternalStorage.request();
-
-    if (!await Permission.manageExternalStorage.isGranted) {
-      return;
-    }
-
-    final baseDir = Directory("/storage/emulated/0/TXTEditor");
-
-    if (!await baseDir.exists()) {
-      await baseDir.create(recursive: true);
-    }
-
-    final file = File("${baseDir.path}/$fileName");
-
-    await file.writeAsString(controller.text);
-
-    if (!mounted) return;
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text("Saved to ${file.path}"),
-      ),
-    );
-  }
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(
+      content: Text("Saved to $path"),
+    ),
+  );
+}
 
   @override
   Widget build(BuildContext context) {
