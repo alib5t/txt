@@ -76,11 +76,33 @@ class _EditorScreenState extends State<EditorScreen> {
   }
 
 Future<void> exportFile() async {
-  ScaffoldMessenger.of(context).showSnackBar(
-    const SnackBar(
-      content: Text("Export button pressed"),
-    ),
-  );
+  try {
+    final dir = Directory("/storage/emulated/0/TXTEditor");
+
+    if (!await dir.exists()) {
+      await dir.create(recursive: true);
+    }
+
+    final file = File("${dir.path}/test.txt");
+
+    await file.writeAsString("test");
+
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text("File saved successfully"),
+      ),
+    );
+  } catch (e) {
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text("ERROR: $e"),
+      ),
+    );
+  }
 }
 
   @override
