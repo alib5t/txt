@@ -76,14 +76,62 @@ class _EditorScreenState extends State<EditorScreen> {
   }
 
 Future<void> exportFile() async {
-  String? path = await FilePicker.platform.saveFile(
-    dialogTitle: 'Save TXT File',
-    fileName: 'note.txt',
+  if (!await Permission.manageExternalStorage.isGranted) {
+    await Permission.manageExternalStorage.request();
+
+    if (!await Permission.manageExternalStorage.isGranted) {
+      return;
+    }
+  }
+
+  TextEditingController nameController =
+      TextEditingController(text: "note.txt");
+
+  bool cancelled = false;
+
+  await showDialog(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: const Text("File name"),
+      content: TextField(
+        controller: nameController,
+        autofocus: true,
+      ),
+      actions: [
+        TextButton(
+          onPressed: () {
+            cancelled = true;
+            Navigator.pop(context);
+          },
+          child: const Text("Cancel"),
+        ),
+        TextButton(
+          onPressed: () {
+            Navigator.pop(context);
+          },
+          child: const Text("Save"),
+        ),
+      ],
+    ),
   );
 
-  if (path == null) return;
+  if (cancelled) return;
 
-  final file = File(path);
+  String fileName = nameController.text.trim();
+
+  if (fileName.isEmpty) return;
+
+  if (!fileName.endsWith(".txt")) {
+    fileName += ".txt";
+  }
+
+  final dir = Directory("/storage/emulated/0/TXTEditor");
+
+  if (!await dir.exists()) {
+    await dir.create(recursive: true);
+  }
+
+  final file = File("${dir.path}/$fileName");
 
   await file.writeAsString(controller.text);
 
@@ -91,7 +139,9 @@ Future<void> exportFile() async {
 
   ScaffoldMessenger.of(context).showSnackBar(
     SnackBar(
-      content: Text("Saved to $path"),
+      content: Text(
+        "Saved:\n${file.path}",
+      ),
     ),
   );
 }
