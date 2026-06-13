@@ -77,21 +77,69 @@ class _EditorScreenState extends State<EditorScreen> {
 
 Future<void> exportFile() async {
   try {
-    final dir = Directory("/storage/emulated/0/TXTEditor");
+    TextEditingController nameController =
+        TextEditingController(text: "note.txt");
 
-    if (!await dir.exists()) {
-      await dir.create(recursive: true);
+    bool cancelled = false;
+
+    await showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("File name"),
+        content: TextField(
+          controller: nameController,
+          autofocus: true,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              cancelled = true;
+              Navigator.pop(context);
+            },
+            child: const Text("Cancel"),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+            },
+            child: const Text("Save"),
+          ),
+        ],
+      ),
+    );
+
+    if (cancelled) return;
+
+    String fileName = nameController.text.trim();
+
+    if (fileName.isEmpty) return;
+
+    if (!fileName.endsWith(".txt")) {
+      fileName += ".txt";
     }
 
-    final file = File("${dir.path}/test.txt");
+    final mediaDir = Directory(
+      "/storage/emulated/0/Android/media/com.txteditor.app/TXTEditor",
+    );
 
-    await file.writeAsString("test");
+    if (!await mediaDir.exists()) {
+      await mediaDir.create(recursive: true);
+    }
+
+    final file = File(
+      "${mediaDir.path}/$fileName",
+    );
+
+    await file.writeAsString(controller.text);
 
     if (!mounted) return;
 
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text("File saved successfully"),
+      SnackBar(
+        duration: const Duration(seconds: 5),
+        content: Text(
+          "Saved to:\n${file.path}",
+        ),
       ),
     );
   } catch (e) {
@@ -99,7 +147,9 @@ Future<void> exportFile() async {
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text("ERROR: $e"),
+        content: Text(
+          "ERROR: $e",
+        ),
       ),
     );
   }
