@@ -1,13 +1,19 @@
 workflows:
-  android-apk:
-    name: Android APK
+  android-release:
+    name: Android AAB
 
     environment:
       flutter: stable
 
+      groups:
+        - keystore
+
+      android_signing:
+        - keystore
+
     scripts:
       - flutter pub get
-      - flutter build apk --release
+      - flutter build appbundle --release
 
     artifacts:
-      - build/app/outputs/flutter-apk/app-release.apk
+      - build/app/outputs/bundle/release/*.aab
