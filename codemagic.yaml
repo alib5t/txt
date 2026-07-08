@@ -4,14 +4,20 @@ workflows:
 
     environment:
       flutter: stable
-
       groups:
         - keystore
 
-      android_signing:
-        - keystore
-
     scripts:
+      - echo $CM_KEYSTORE | base64 --decode > android/app/upload-keystore.jks
+
+      - |
+        cat > android/key.properties <<EOF
+        storePassword=$CM_KEYSTORE_PASSWORD
+        keyPassword=$CM_KEY_PASSWORD
+        keyAlias=$CM_KEY_ALIAS
+        storeFile=app/upload-keystore.jks
+        EOF
+
       - flutter pub get
       - flutter build appbundle --release
 
